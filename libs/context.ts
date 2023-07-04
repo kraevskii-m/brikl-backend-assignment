@@ -1,13 +1,11 @@
 import { PrismaClient } from '@prisma/client'
-import type { ExpressContext } from 'apollo-server-express'
 
-export interface Context {
+export interface Context{
   prisma: PrismaClient
 }
 
-export function createContext(ctx: ExpressContext): Context {
-  return {
-    ...ctx,
-    prisma: new PrismaClient(),
-  }
-}
+const prisma = new PrismaClient()
+
+export const createContext = async () => ({
+  prisma: prisma,
+})

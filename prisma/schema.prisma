@@ -1,14 +1,44 @@
 datasource db {
   provider = "postgresql"
   url      = env("DB_URL")
+  schemas  = ["user", "task"]
 }
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
 }
 
 model User {
-  id       String @id @default(uuid())
-  username String
-  password String
+  id            String @id @default(uuid())
+  username      String @db.VarChar(255)
+  password_hash String @db.VarChar(255)
+
+  @@schema("user")
+}
+
+model Task {
+  id         String     @id
+  title      String     @db.VarChar(255)
+  status     TaskStatus @default(CREATED)
+  order      Float
+  taskListId String
+  list       TaskList   @relation(fields: [taskListId], references: [id])
+
+  @@schema("task")
+}
+
+model TaskList {
+  id    String @id
+  title String @db.VarChar(255)
+  Task  Task[]
+
+  @@schema("task")
+}
+
+enum TaskStatus {
+  CREATED
+  COMLETED
+
+  @@schema("task")
 }

@@ -2,9 +2,10 @@ import { mergeResolvers, mergeTypeDefs } from '@graphql-tools/merge'
 import { makeExecutableSchema } from '@graphql-tools/schema'
 import { stitchingDirectives } from '@graphql-tools/stitching-directives'
 import type { IResolvers } from '@graphql-tools/utils'
-import { ApolloServer, gql } from 'apollo-server'
+import { ApolloServer } from '@apollo/server'
 import { DocumentNode, GraphQLSchema, print } from 'graphql'
-import { createContext } from './context'
+import { Context } from './context'
+import gql from 'graphql-tag'
 
 export interface CreateGqlServerOptions {
   typeDefs: DocumentNode
@@ -13,13 +14,9 @@ export interface CreateGqlServerOptions {
 
 export async function createGqlServer(
   options: CreateGqlServerOptions
-): Promise<ApolloServer> {
+): Promise<ApolloServer<Context>> {
   const schema = makeSchema(options)
-
-  return new ApolloServer({
-    schema,
-    context: ctx => createContext(ctx),
-  })
+  return new ApolloServer<Context>({ schema })
 }
 
 function mergeTypeDefsWithDirectives(typeDefs: DocumentNode): DocumentNode {

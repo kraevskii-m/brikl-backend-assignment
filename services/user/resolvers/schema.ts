@@ -1,4 +1,4 @@
-import { gql } from 'apollo-server'
+import gql from 'graphql-tag'
 
 export const typeDefs = gql`
   type User {
@@ -8,7 +8,7 @@ export const typeDefs = gql`
 
   input CreateUserInput {
     username: String!
-    password: String!
+    password_hash: String!
   }
 
   input UpdateUserInput {
