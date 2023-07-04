@@ -18,18 +18,18 @@ model User {
 }
 
 model Task {
-  id         String     @id
+  id         Int        @id
   title      String     @db.VarChar(255)
   status     TaskStatus @default(CREATED)
   order      Float
-  taskListId String
+  taskListId Int
   list       TaskList   @relation(fields: [taskListId], references: [id])
 
   @@schema("task")
 }
 
 model TaskList {
-  id    String @id
+  id    Int    @id
   title String @db.VarChar(255)
   Task  Task[]
 
