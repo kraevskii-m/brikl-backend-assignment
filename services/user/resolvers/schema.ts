@@ -1,3 +1,5 @@
+// noinspection GraphQLTypeRedefinition
+
 import gql from 'graphql-tag'
 
 export const typeDefs = gql`
@@ -8,7 +10,7 @@ export const typeDefs = gql`
 
   input CreateUserInput {
     username: String!
-    password_hash: String!
+    password: String!
   }
 
   input UpdateUserInput {

@@ -10,9 +10,10 @@ generator client {
 }
 
 model User {
-  id            String @id @default(uuid())
-  username      String @db.VarChar(255)
-  password_hash String @db.VarChar(255)
+  id        String   @id @default(uuid())
+  username  String   @db.VarChar(255)
+  password  String   @db.VarChar(255)
+  createdAt DateTime @default(now())
 
   @@schema("user")
 }
@@ -24,14 +25,16 @@ model Task {
   order      Float
   taskListId Int
   list       TaskList   @relation(fields: [taskListId], references: [id])
+  createdAt  DateTime   @default(now())
 
   @@schema("task")
 }
 
 model TaskList {
-  id    Int    @id
-  title String @db.VarChar(255)
-  Task  Task[]
+  id        Int      @id
+  title     String   @db.VarChar(255)
+  Task      Task[]
+  createdAt DateTime @default(now())
 
   @@schema("task")
 }
