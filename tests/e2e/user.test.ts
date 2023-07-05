@@ -43,7 +43,7 @@ describe('user service tests', () => {
   })
 
 
-  it('create user', async () => {
+  it('create user - happy scenario', async () => {
     const mutation = {
       query: `
           mutation CreateUser($input: CreateUserInput!) {
@@ -70,7 +70,7 @@ describe('user service tests', () => {
     const rows_after = await prismaClient.user.count()
 
     expect(response.status).toBe(200)
-    expect(response.errors).toBeUndefined()
+    expect(response.body.errors).toBeUndefined()
     expect(response.body.data?.createUser.username).toBe(mutation.variables.input.username)
     expect(rows_before + 1).toBe(rows_after)
     const last_record = await prismaClient
@@ -81,5 +81,36 @@ describe('user service tests', () => {
         take: 1
       })
     expect(last_record[0].username).toBe(mutation.variables.input.username)
+  })
+
+  it('create user - wrong request returns error', async () => {
+
+    const mutation = {
+      query: `
+          mutation CreateUserWrong($input: CreateUserInput!) {
+              createUserWrong(input: $input) {
+                  username
+              }
+          }
+      `,
+      variables: {
+        'input': {
+          'username': getRandomString(),
+          'password': getRandomString()
+        }
+      }
+    }
+
+    const rows_before = await prismaClient.user.count()
+
+    const response = await request(url)
+      .post('/')
+      .set('Content-Type', 'application/json')
+      .send(mutation)
+
+    const rows_after = await prismaClient.user.count()
+
+    expect(response.status).toBe(400)
+    expect(rows_before).toBe(rows_after)
   })
 })
