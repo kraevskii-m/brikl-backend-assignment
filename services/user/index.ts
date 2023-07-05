@@ -7,12 +7,11 @@ import { Context, createContext } from '../../libs/context'
 export async function startServer(): Promise<void> {
   const server = await createGqlServer({
     typeDefs,
-    resolvers,
+    resolvers
   })
 
   const { url } = await startStandaloneServer<Context>(server, {
-    listen: { port: Number(process.env.USER_SERVICE_PORT),
-    },
+    listen: { port: Number(process.env.USER_SERVICE_PORT) },
     context: createContext
   })
 

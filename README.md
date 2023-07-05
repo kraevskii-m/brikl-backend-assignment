@@ -44,3 +44,9 @@ This is the instruction to setup this project and run in your local machine. Not
 5. Run `pnpm codegen` to generate TypeScript definition for GraphQL and Prisma client.
 6. Run `pnpm start` to start the project.
 7. Go to `http://localhost:4000`, you should see Apollo Playground with two queries `users` and `user`. You may change the port according to `GATEWAY_PORT` in your `.env` file.
+
+### Run tests
+
+```shell
+pnpm test
+```
