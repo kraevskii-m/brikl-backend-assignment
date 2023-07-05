@@ -78,10 +78,31 @@ describe('user service tests', () => {
         expect(response.status).toBe(200)
         expect(response.body.data?.user).toBeNull()
       })
-
     })
 
-    describe('get multiple users', () => {
+    describe('get all users', () => {
+      it('returns exact number of users', async () => {
+        await CreateRandomUser()
+
+        const getUserQuery = {
+          query: `
+              query Users {
+                  users {
+                      username
+                  }
+              }
+          `
+        }
+
+        const response = await request(url)
+          .post('/')
+          .send(getUserQuery)
+
+        const rows = await prismaClient.user.count()
+
+        expect(response.status).toBe(200)
+        expect(response.body.data?.users.length).toBe(rows)
+      })
     })
   })
 
