@@ -8,7 +8,17 @@ export const mutation: Resolvers<Context>['Mutation'] = {
     ctx.prisma.user.update({
       where: { id },
       data: {
-        username: input.username ?? undefined,
-      },
+        username: input.username ?? undefined
+      }
     }),
+  deleteUser: async (_parent, { id }, ctx) => {
+    try {
+      await ctx.prisma.user.delete({
+        where: { id }
+      })
+    } catch (e) {
+      return { success: false }
+    }
+    return { success: true }
+  }
 }

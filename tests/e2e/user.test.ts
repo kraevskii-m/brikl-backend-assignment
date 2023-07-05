@@ -52,7 +52,7 @@ describe('user service tests', () => {
   })
 
   describe('create user', () => {
-    it('happy scenario', async () => {
+    it('happy flow', async () => {
       const createUserMutation = {
         query: `
           mutation CreateUser($input: CreateUserInput!) {
@@ -134,7 +134,7 @@ describe('user service tests', () => {
       ({ id } = await prismaClient.user.create({ data: userInput }))
     })
 
-    it('happy scenario', async () => {
+    it('happy flow', async () => {
       const updateUserMutation = {
         query: `
           mutation UpdateUser($updateUserId: ID!, $input: UpdateUserInput!) {
@@ -192,6 +192,82 @@ describe('user service tests', () => {
 
       expect(response.status).toBe(200)
       expect(response.body.errors.length).toBeGreaterThanOrEqual(1)
+    })
+  })
+
+  describe('delete user', () => {
+    let id: string
+
+    beforeEach(async () => {
+      const userInput = {
+        username: getRandomString(),
+        password: getRandomString()
+      };
+      ({ id } = await prismaClient.user.create({ data: userInput }))
+    })
+
+    it('happy flow', async () => {
+
+      const deleteUserMutation = {
+        query: `
+          mutation DeleteUser($deleteUserId: ID!) {
+              deleteUser(id: $deleteUserId) {
+                  success
+              }
+          }
+      `,
+        variables: {
+          'deleteUserId': id
+        }
+      }
+
+      const rows_before = await prismaClient.user.count()
+
+      const response = await request(url)
+        .post('/')
+        .set('Content-Type', 'application/json')
+        .send(deleteUserMutation)
+
+      const rows_after = await prismaClient.user.count()
+
+      expect(response.status).toBe(200)
+      expect(response.body.errors).toBeUndefined()
+      expect(response.body.data?.deleteUser.success).toBe(true)
+      expect(rows_before - 1).toBe(rows_after)
+      const record = await prismaClient.user.findUnique({ where: { id } })
+      expect(record).toBeNull()
+    })
+
+    it('wrong id returns error', async () => {
+
+      const deleteUserMutationWrong = {
+        query: `
+          mutation DeleteUser($deleteUserId: ID!) {
+              deleteUser(id: $deleteUserId) {
+                  success
+              }
+          }
+      `,
+        variables: {
+          'deleteUserId': id + 'a'
+        }
+      }
+
+      const rows_before = await prismaClient.user.count()
+
+      const response = await request(url)
+        .post('/')
+        .set('Content-Type', 'application/json')
+        .send(deleteUserMutationWrong)
+
+      const rows_after = await prismaClient.user.count()
+
+      expect(response.status).toBe(200)
+      expect(response.body.errors).toBeUndefined()
+      expect(response.body.data?.deleteUser.success).toBe(false)
+      expect(rows_before).toBe(rows_after)
+      const record = await prismaClient.user.findUnique({ where: { id } })
+      expect(record).not.toBeNull()
     })
   })
 })
