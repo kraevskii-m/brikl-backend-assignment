@@ -39,6 +39,15 @@ describe('user service tests', () => {
   })
 
   afterAll(async () => {
+    const deleteTask = prismaClient.task.deleteMany()
+    const deleteTaskList = prismaClient.taskList.deleteMany()
+    const deleteUser = prismaClient.user.deleteMany()
+
+    await prismaClient.$transaction([
+      deleteTask,
+      deleteTaskList,
+      deleteUser,
+    ])
     await server?.stop()
   })
 
