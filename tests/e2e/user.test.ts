@@ -1,273 +1,299 @@
-import { createGqlServer } from '../../libs/server'
-import { typeDefs } from '../../services/user/resolvers/schema'
-import { resolvers } from '../../services/user/resolvers'
-import { startStandaloneServer } from '@apollo/server/standalone'
 import { Context } from '../../libs/context'
 import { ApolloServer } from '@apollo/server'
 import { PrismaClient } from '@prisma/client'
-import { getRandomString } from '../helpers'
+import { cleanDB, createServer, getRandomString } from '../helpers'
 
 const request = require('supertest')
-
-const createServer = async () => {
-  const server = await createGqlServer({
-    typeDefs,
-    resolvers
-  })
-
-  const prismaClient = new PrismaClient()
-
-  const { url } = await startStandaloneServer<Context>(server, {
-    listen: {
-      port: Number(process.env.USER_SERVICE_PORT)
-    },
-    context: async () => ({
-      prisma: prismaClient
-    })
-  })
-
-  return { server, url, prismaClient }
-}
 
 describe('user service tests', () => {
   let server: ApolloServer<Context>
   let url: string
   let prismaClient: PrismaClient
 
+  const CreateRandomUser = async () => {
+    const userInput = {
+      username: getRandomString(),
+      password: getRandomString()
+    }
+    const { id, username } = await prismaClient.user.create({ data: userInput })
+
+    return { id, username }
+  }
+
   beforeAll(async () => {
     ({ server, url, prismaClient } = await createServer())
   })
 
   afterAll(async () => {
-    const deleteTask = prismaClient.task.deleteMany()
-    const deleteTaskList = prismaClient.taskList.deleteMany()
-    const deleteUser = prismaClient.user.deleteMany()
-
-    await prismaClient.$transaction([
-      deleteTask,
-      deleteTaskList,
-      deleteUser
-    ])
+    await cleanDB(prismaClient)
     await server?.stop()
   })
 
-  describe('create user', () => {
-    it('happy flow', async () => {
-      const createUserMutation = {
-        query: `
-          mutation CreateUser($input: CreateUserInput!) {
-              createUser(input: $input) {
-                  username
+  describe('query', () => {
+    describe('get single user', () => {
+      it('happy flow', async () => {
+        const { id, username } = await CreateRandomUser()
+
+        const getUserQuery = {
+          query: `
+              query User($id: ID!) {
+                  user(id: $id) {
+                      username
+                  }
               }
-          }
-      `,
-        variables: {
-          'input': {
-            'username': getRandomString(),
-            'password': getRandomString()
+          `,
+          variables: {
+            'id': id
           }
         }
-      }
 
-      const rows_before = await prismaClient.user.count()
+        const response = await request(url)
+          .post('/')
+          .send(getUserQuery)
 
-      const response = await request(url)
-        .post('/')
-        .set('Content-Type', 'application/json')
-        .send(createUserMutation)
+        expect(response.status).toBe(200)
+        expect(response.body.data?.user.username).toBe(username)
+      })
 
-      const rows_after = await prismaClient.user.count()
+      it('user not exist', async () => {
+        const { id } = await CreateRandomUser()
 
-      expect(response.status).toBe(200)
-      expect(response.body.errors).toBeUndefined()
-      expect(response.body.data?.createUser.username).toBe(createUserMutation.variables.input.username)
-      expect(rows_before + 1).toBe(rows_after)
-      const last_record = await prismaClient
-        .user.findMany({
-          orderBy: {
-            createdAt: 'desc'
-          },
-          take: 1
-        })
-      expect(last_record[0].username).toBe(createUserMutation.variables.input.username)
+        const getUserQuery = {
+          query: `
+              query User($id: ID!) {
+                  user(id: $id) {
+                      username
+                  }
+              }
+          `,
+          variables: {
+            'id': id + 'a'
+          }
+        }
+
+        const response = await request(url)
+          .post('/')
+          .send(getUserQuery)
+
+        expect(response.status).toBe(200)
+        expect(response.body.data?.user).toBeNull()
+      })
+
     })
 
-    it('wrong request returns error', async () => {
-      const wrongMutation = {
-        query: `
-          mutation CreateUserWrong($input: CreateUserInput!) {
-              createUserWrong(input: $input) {
-                  username
-              }
-          }
-      `,
-        variables: {
-          'input': {
-            'username': getRandomString(),
-            'password': getRandomString()
-          }
-        }
-      }
-
-      const rows_before = await prismaClient.user.count()
-
-      const response = await request(url)
-        .post('/')
-        .set('Content-Type', 'application/json')
-        .send(wrongMutation)
-
-      const rows_after = await prismaClient.user.count()
-
-      expect(response.status).toBe(400)
-      expect(rows_before).toBe(rows_after)
+    describe('get multiple users', () => {
     })
   })
 
-  describe('update user', () => {
-    let id: string
-
-    beforeEach(async () => {
-      const userInput = {
-        username: getRandomString(),
-        password: getRandomString()
-      };
-      ({ id } = await prismaClient.user.create({ data: userInput }))
-    })
-
-    it('happy flow', async () => {
-      const updateUserMutation = {
-        query: `
-          mutation UpdateUser($updateUserId: ID!, $input: UpdateUserInput!) {
-              updateUser(id: $updateUserId, input: $input) {
-                  username
+  describe('mutation', () => {
+    describe('create user', () => {
+      it('happy flow', async () => {
+        const createUserMutation = {
+          query: `
+              mutation CreateUser($input: CreateUserInput!) {
+                  createUser(input: $input) {
+                      username
+                  }
               }
+          `,
+          variables: {
+            'input': {
+              'username': getRandomString(),
+              'password': getRandomString()
+            }
           }
-      `,
-        variables: {
-          'input': {
-            'username': getRandomString()
-          },
-          'updateUserId': id
         }
-      }
 
-      const rows_before = await prismaClient.user.count()
+        const rows_before = await prismaClient.user.count()
 
-      const response = await request(url)
-        .post('/')
-        .set('Content-Type', 'application/json')
-        .send(updateUserMutation)
+        const response = await request(url)
+          .post('/')
+          .send(createUserMutation)
 
-      const rows_after = await prismaClient.user.count()
+        const rows_after = await prismaClient.user.count()
 
-      expect(response.status).toBe(200)
-      expect(response.body.errors).toBeUndefined()
-      expect(response.body.data?.updateUser.username).toBe(updateUserMutation.variables.input.username)
-      expect(rows_before).toBe(rows_after)
-      const record = await prismaClient.user.findUnique({ where: { id } })
-      expect(record?.username).toBe(updateUserMutation.variables.input.username)
-    })
+        expect(response.status).toBe(200)
+        expect(response.body.errors).toBeUndefined()
+        expect(response.body.data?.createUser.username).toBe(createUserMutation.variables.input.username)
+        expect(rows_before + 1).toBe(rows_after)
+        const last_record = await prismaClient
+          .user.findMany({
+            orderBy: {
+              createdAt: 'desc'
+            },
+            take: 1
+          })
+        expect(last_record[0].username).toBe(createUserMutation.variables.input.username)
+      })
 
-    it('wrong id returns error', async () => {
-      const updateUserMutationWrong = {
-        query: `
-          mutation UpdateUser($updateUserId: ID!, $input: UpdateUserInput!) {
-              updateUser(id: $updateUserId, input: $input) {
-                  username
+      it('wrong input returns error', async () => {
+        const wrongMutation = {
+          query: `
+              mutation CreateUser($input: CreateUserInput!) {
+                  createUser(input: $input) {
+                      username
+                  }
               }
+          `,
+          variables: {
+            'input': {
+              'username': getRandomString()
+            }
           }
-      `,
-        variables: {
-          'input': {
-            'username': getRandomString()
-          },
-          'updateUserId': id + 'a'
         }
-      }
 
-      const response = await request(url)
-        .post('/')
-        .set('Content-Type', 'application/json')
-        .send(updateUserMutationWrong)
+        const rows_before = await prismaClient.user.count()
 
-      expect(response.status).toBe(200)
-      expect(response.body.errors.length).toBeGreaterThanOrEqual(1)
-    })
-  })
+        const response = await request(url)
+          .post('/')
+          .send(wrongMutation)
 
-  describe('delete user', () => {
-    let id: string
+        const rows_after = await prismaClient.user.count()
 
-    beforeEach(async () => {
-      const userInput = {
-        username: getRandomString(),
-        password: getRandomString()
-      };
-      ({ id } = await prismaClient.user.create({ data: userInput }))
+        expect(response.status).toBe(200)
+        expect(response.body.errors.length).toBeGreaterThanOrEqual(1)
+        expect(rows_before).toBe(rows_after)
+      })
     })
 
-    it('happy flow', async () => {
+    describe('update user', () => {
+      let id: string
 
-      const deleteUserMutation = {
-        query: `
-          mutation DeleteUser($deleteUserId: ID!) {
-              deleteUser(id: $deleteUserId) {
-                  success
+      beforeEach(async () => {
+        const userInput = {
+          username: getRandomString(),
+          password: getRandomString()
+        };
+        ({ id } = await prismaClient.user.create({ data: userInput }))
+      })
+
+      it('happy flow', async () => {
+        const updateUserMutation = {
+          query: `
+              mutation UpdateUser($updateUserId: ID!, $input: UpdateUserInput!) {
+                  updateUser(id: $updateUserId, input: $input) {
+                      username
+                  }
               }
+          `,
+          variables: {
+            'input': {
+              'username': getRandomString()
+            },
+            'updateUserId': id
           }
-      `,
-        variables: {
-          'deleteUserId': id
         }
-      }
 
-      const rows_before = await prismaClient.user.count()
+        const rows_before = await prismaClient.user.count()
 
-      const response = await request(url)
-        .post('/')
-        .set('Content-Type', 'application/json')
-        .send(deleteUserMutation)
+        const response = await request(url)
+          .post('/')
+          .send(updateUserMutation)
 
-      const rows_after = await prismaClient.user.count()
+        const rows_after = await prismaClient.user.count()
 
-      expect(response.status).toBe(200)
-      expect(response.body.errors).toBeUndefined()
-      expect(response.body.data?.deleteUser.success).toBe(true)
-      expect(rows_before - 1).toBe(rows_after)
-      const record = await prismaClient.user.findUnique({ where: { id } })
-      expect(record).toBeNull()
+        expect(response.status).toBe(200)
+        expect(response.body.errors).toBeUndefined()
+        expect(response.body.data?.updateUser.username).toBe(updateUserMutation.variables.input.username)
+        expect(rows_before).toBe(rows_after)
+        const record = await prismaClient.user.findUnique({ where: { id } })
+        expect(record?.username).toBe(updateUserMutation.variables.input.username)
+      })
+
+      it('wrong id returns error', async () => {
+        const updateUserMutationWrong = {
+          query: `
+              mutation UpdateUser($updateUserId: ID!, $input: UpdateUserInput!) {
+                  updateUser(id: $updateUserId, input: $input) {
+                      username
+                  }
+              }
+          `,
+          variables: {
+            'input': {
+              'username': getRandomString()
+            },
+            'updateUserId': id + 'a'
+          }
+        }
+
+        const response = await request(url)
+          .post('/')
+          .send(updateUserMutationWrong)
+
+        expect(response.status).toBe(200)
+        expect(response.body.errors.length).toBeGreaterThanOrEqual(1)
+      })
     })
 
-    it('wrong id returns error', async () => {
+    describe('delete user', () => {
+      let id: string
 
-      const deleteUserMutationWrong = {
-        query: `
-          mutation DeleteUser($deleteUserId: ID!) {
-              deleteUser(id: $deleteUserId) {
-                  success
+      beforeEach(async () => {
+        ({ id } = await CreateRandomUser())
+      })
+
+      it('happy flow', async () => {
+
+        const deleteUserMutation = {
+          query: `
+              mutation DeleteUser($deleteUserId: ID!) {
+                  deleteUser(id: $deleteUserId) {
+                      success
+                  }
               }
+          `,
+          variables: {
+            'deleteUserId': id
           }
-      `,
-        variables: {
-          'deleteUserId': id + 'a'
         }
-      }
 
-      const rows_before = await prismaClient.user.count()
+        const rows_before = await prismaClient.user.count()
 
-      const response = await request(url)
-        .post('/')
-        .set('Content-Type', 'application/json')
-        .send(deleteUserMutationWrong)
+        const response = await request(url)
+          .post('/')
+          .send(deleteUserMutation)
 
-      const rows_after = await prismaClient.user.count()
+        const rows_after = await prismaClient.user.count()
 
-      expect(response.status).toBe(200)
-      expect(response.body.errors).toBeUndefined()
-      expect(response.body.data?.deleteUser.success).toBe(false)
-      expect(rows_before).toBe(rows_after)
-      const record = await prismaClient.user.findUnique({ where: { id } })
-      expect(record).not.toBeNull()
+        expect(response.status).toBe(200)
+        expect(response.body.errors).toBeUndefined()
+        expect(response.body.data?.deleteUser.success).toBe(true)
+        expect(rows_before - 1).toBe(rows_after)
+        const record = await prismaClient.user.findUnique({ where: { id } })
+        expect(record).toBeNull()
+      })
+
+      it('wrong id returns error', async () => {
+
+        const deleteUserMutationWrong = {
+          query: `
+              mutation DeleteUser($deleteUserId: ID!) {
+                  deleteUser(id: $deleteUserId) {
+                      success
+                  }
+              }
+          `,
+          variables: {
+            'deleteUserId': id + 'a'
+          }
+        }
+
+        const rows_before = await prismaClient.user.count()
+
+        const response = await request(url)
+          .post('/')
+          .send(deleteUserMutationWrong)
+
+        const rows_after = await prismaClient.user.count()
+
+        expect(response.status).toBe(200)
+        expect(response.body.errors).toBeUndefined()
+        expect(response.body.data?.deleteUser.success).toBe(false)
+        expect(rows_before).toBe(rows_after)
+        const record = await prismaClient.user.findUnique({ where: { id } })
+        expect(record).not.toBeNull()
+      })
     })
   })
 })
