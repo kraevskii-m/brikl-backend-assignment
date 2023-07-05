@@ -18,18 +18,18 @@ CREATE TABLE "user"."User" (
 
 -- CreateTable
 CREATE TABLE "task"."Task" (
-    "id" TEXT NOT NULL,
+    "id" INTEGER NOT NULL,
     "title" VARCHAR(255) NOT NULL,
     "status" "task"."TaskStatus" NOT NULL DEFAULT 'CREATED',
     "order" DOUBLE PRECISION NOT NULL,
-    "taskListId" TEXT NOT NULL,
+    "taskListId" INTEGER NOT NULL,
 
     CONSTRAINT "Task_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "task"."TaskList" (
-    "id" TEXT NOT NULL,
+    "id" INTEGER NOT NULL,
     "title" VARCHAR(255) NOT NULL,
 
     CONSTRAINT "TaskList_pkey" PRIMARY KEY ("id")
