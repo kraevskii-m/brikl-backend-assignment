@@ -3,5 +3,23 @@ import { Context } from '../../../libs/context'
 
 export const mutation: Resolvers<Context>['Mutation'] = {
   createTaskList: async (_parent, { title }, ctx) =>
-    ctx.prisma.taskList.create({ data: { title } })
+    ctx.prisma.taskList.create({ data: { title } }),
+  createTask: async (_parent, { input }, ctx) => {
+    return await ctx.prisma.$transaction(async (tx) => {
+      let order
+      const lastRecord = await tx.task.findFirst({
+        orderBy: {
+          order: 'desc'
+        }
+      })
+      order = !lastRecord ? 0 : lastRecord.order + 1
+      return tx.task.create({
+        data: {
+          title: input.title,
+          taskListId: input.taskListId,
+          order
+        }
+      })
+    })
+  }
 }

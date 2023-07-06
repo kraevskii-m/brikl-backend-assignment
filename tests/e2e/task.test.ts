@@ -98,8 +98,108 @@ describe('user service tests', () => {
     })
 
     describe('create a new task in list', () => {
-      it('happy flow', () => {
-        expect(true).toBeTruthy()
+      let taskListId: number
+
+      beforeEach(async () => {
+        await prismaClient.task.deleteMany()
+        const { id } = await prismaClient.taskList.create(
+          {
+            data: {
+              title: getRandomString()
+            }
+          })
+        taskListId = id
+      })
+
+      it('single task has 0 order', async () => {
+        const createTaskMutation = {
+          query: `
+              mutation CreateTask($input: CreateTaskInput!) {
+                  createTask(input: $input) {
+                      title
+                      order
+                  }
+              }
+          `,
+          variables: {
+            'input': {
+              'title': getRandomString(),
+              'taskListId': taskListId
+            }
+          }
+        }
+
+        const rows_before = await prismaClient.task.count()
+
+        const response = await request(url)
+          .post('/')
+          .send(createTaskMutation)
+
+        const rows_after = await prismaClient.task.count()
+
+        expect(response.status).toBe(200)
+        expect(response.body.errors).toBeUndefined()
+        expect(response.body.data?.createTask.title)
+          .toBe(createTaskMutation.variables.input.title)
+        expect(rows_before + 1).toBe(rows_after)
+        const last_record = await prismaClient
+          .task.findMany({
+            orderBy: {
+              createdAt: 'desc'
+            },
+            take: 1
+          })
+        expect(last_record[0].order).toBe(0)
+      })
+
+      it('new task has order the greater order', async () => {
+        const  task  = await prismaClient.task.create(
+          {
+            data: {
+              title: getRandomString(),
+              order: 0,
+              taskListId: taskListId
+            }
+          })
+
+        const createTaskMutation = {
+          query: `
+              mutation CreateTask($input: CreateTaskInput!) {
+                  createTask(input: $input) {
+                      title
+                      order
+                  }
+              }
+          `,
+          variables: {
+            'input': {
+              'title': getRandomString(),
+              'taskListId': taskListId
+            }
+          }
+        }
+
+        const rows_before = await prismaClient.task.count()
+
+        const response = await request(url)
+          .post('/')
+          .send(createTaskMutation)
+
+        const rows_after = await prismaClient.task.count()
+
+        expect(response.status).toBe(200)
+        expect(response.body.errors).toBeUndefined()
+        expect(response.body.data?.createTask.title)
+          .toBe(createTaskMutation.variables.input.title)
+        expect(rows_before + 1).toBe(rows_after)
+        const last_record = await prismaClient
+          .task.findMany({
+            orderBy: {
+              createdAt: 'desc'
+            },
+            take: 1
+          })
+        expect(last_record[0].order).toBe(task.order + 1)
       })
     })
 

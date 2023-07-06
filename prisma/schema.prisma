@@ -22,7 +22,7 @@ model Task {
   id         Int        @id @default(autoincrement())
   title      String     @db.VarChar(255)
   status     TaskStatus @default(CREATED)
-  order      Float
+  order      Float      @unique(sort: Asc)
   taskListId Int
   list       TaskList   @relation(fields: [taskListId], references: [id])
   createdAt  DateTime   @default(now())

@@ -3,6 +3,7 @@ import gql from 'graphql-tag'
 export const typeDefs = gql`
     type Task {
         title: String
+        order: Float
     }
     
     type TaskList {
@@ -15,7 +16,8 @@ export const typeDefs = gql`
     }
 
     input CreateTaskInput {
-        title: String
+        title: String!
+        taskListId: Int!
     }
 
     type Query {
@@ -24,6 +26,6 @@ export const typeDefs = gql`
 
     type Mutation {
         createTaskList(title: String!): TaskList!,
-        createTask(input: CreateTaskInput!): MutationResult!
+        createTask(input: CreateTaskInput!): Task!
     }
 `
