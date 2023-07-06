@@ -22,7 +22,7 @@ export const mutation: Resolvers<Context>['Mutation'] = {
     }),
   deleteTask: async (parent, { id }, ctx) => {
     try {
-      ctx.prisma.task.delete({
+      await ctx.prisma.task.delete({
         where: { id }
       })
     } catch (e) {
@@ -32,7 +32,7 @@ export const mutation: Resolvers<Context>['Mutation'] = {
   },
   deleteTaskList: async (parent, { id }, ctx) => {
     try {
-      ctx.prisma.taskList.delete({
+      await ctx.prisma.taskList.delete({
         where: { id }
       })
     } catch (e) {

@@ -91,7 +91,7 @@ describe('task service tests', () => {
         taskListId = id
       })
 
-      it('single task has 0 order', async () => {
+      it('single task', async () => {
         const createTaskMutation = {
           query: `
               mutation CreateTask($input: CreateTaskInput!) {
@@ -261,15 +261,141 @@ describe('task service tests', () => {
     })
   })
 
-  describe('Delete a list', () => {
-    it('happy flow', () => {
-      expect(true).toBeTruthy()
+  describe('Delete a task', () => {
+    let id: number
+
+    beforeEach(async () => {
+      const taskList = await prismaClient.taskList.create(
+        {
+          data: {
+            title: getRandomString()
+          }
+        })
+
+      await prismaClient.$transaction(async (tx) => {
+        const taskInput = {
+          title: getRandomString(),
+          order: 0,
+          taskListId: taskList.id
+        };
+        ({ id } = await tx.task.create({ data: taskInput }))
+      })
+    })
+
+    it('happy flow', async () => {
+
+      const deleteTaskMutation = {
+        query: `
+              mutation DeleteTask($deleteTaskId: Int!) {
+                  deleteTask(id: $deleteTaskId) {
+                      success
+                  }
+              }
+          `,
+        variables: {
+          'deleteTaskId': id
+        }
+      }
+
+      const response = await request(url)
+        .post('/')
+        .send(deleteTaskMutation)
+
+      expect(response.status).toBe(200)
+      expect(response.body.errors).toBeUndefined()
+      expect(response.body.data?.deleteTask.success).toBe(true)
+      const record = await prismaClient.task.findUnique({ where: { id } })
+      expect(record).toBeNull()
+    })
+
+    it('wrong id returns error', async () => {
+
+      const deleteTaskMutation = {
+        query: `
+              mutation DeleteTask($deleteTaskId: Int!) {
+                  deleteTask(id: $deleteTaskId) {
+                      success
+                  }
+              }
+          `,
+        variables: {
+          'deleteTaskId': id * 10
+        }
+      }
+
+      const response = await request(url)
+        .post('/')
+        .send(deleteTaskMutation)
+
+      expect(response.status).toBe(200)
+      expect(response.body.errors).toBeUndefined()
+      expect(response.body.data?.deleteTask.success).toBe(false)
+      const record = await prismaClient.task.findUnique({ where: { id } })
+      expect(record).not.toBeNull()
     })
   })
 
-  describe('Delete a task', () => {
-    it('happy flow', () => {
-      expect(true).toBeTruthy()
+  describe('Delete a task list', () => {
+    let id: number
+
+    beforeEach(async () => {
+      ({ id } = await prismaClient.taskList.create(
+        {
+          data: {
+            title: getRandomString()
+          }
+        }))
+    })
+
+    it('happy flow', async () => {
+
+      const deleteTaskListMutation = {
+        query: `
+              mutation DeleteTaskList($deleteTaskListId: Int!) {
+                  deleteTaskList(id: $deleteTaskListId) {
+                      success
+                  }
+              }
+          `,
+        variables: {
+          'deleteTaskListId': id
+        }
+      }
+
+      const response = await request(url)
+        .post('/')
+        .send(deleteTaskListMutation)
+
+      expect(response.status).toBe(200)
+      expect(response.body.errors).toBeUndefined()
+      expect(response.body.data?.deleteTaskList.success).toBe(true)
+      const record = await prismaClient.taskList.findUnique({ where: { id } })
+      expect(record).toBeNull()
+    })
+
+    it('wrong id returns error', async () => {
+      const deleteTaskListMutation = {
+        query: `
+              mutation DeleteTaskList($deleteTaskListId: Int!) {
+                  deleteTaskList(id: $deleteTaskListId) {
+                      success
+                  }
+              }
+          `,
+        variables: {
+          'deleteTaskListId': id * 10
+        }
+      }
+
+      const response = await request(url)
+        .post('/')
+        .send(deleteTaskListMutation)
+
+      expect(response.status).toBe(200)
+      expect(response.body.errors).toBeUndefined()
+      expect(response.body.data?.deleteTaskList.success).toBe(false)
+      const record = await prismaClient.taskList.findUnique({ where: { id } })
+      expect(record).not.toBeNull()
     })
   })
 })
