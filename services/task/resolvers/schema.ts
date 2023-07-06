@@ -7,12 +7,14 @@ export const typeDefs = gql`
     }
 
     type Task {
+        id: Int!
         title: String!
         status: String!
         order: Float!
     }
 
     type TaskList {
+        id: Int!
         title: String
         tasks: [Task!]
     }
@@ -39,5 +41,7 @@ export const typeDefs = gql`
         createTaskList(title: String!): TaskList!,
         createTask(input: CreateTaskInput!): Task!
         updateTask(id: Int!, input: UpdateTaskInput!): Task!
+        deleteTask(id: Int!): MutationResult!
+        deleteTaskList(id: Int!): MutationResult!
     }
 `
