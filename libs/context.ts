@@ -16,7 +16,7 @@ prisma.$use(async (params, next) => {
       }
     )
 
-    params.args.data.order = taskMaxOrder? taskMaxOrder.order + 1 : 0
+    params.args.data.order = taskMaxOrder? taskMaxOrder.order + 1 : 1
   }
   return next(params)
 })

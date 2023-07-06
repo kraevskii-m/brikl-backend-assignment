@@ -5,6 +5,7 @@ import { createServer, getRandomString } from '../helpers'
 import { typeDefs } from '../../services/task/resolvers/schema'
 import { resolvers } from '../../services/task/resolvers'
 import request from 'supertest'
+import { Task } from '../../generated/types'
 
 describe('task service tests', () => {
   let server: ApolloServer<Context>
@@ -250,14 +251,162 @@ describe('task service tests', () => {
   })
 
   describe('move a task to a specific position in the list', () => {
-    it('happy flow', () => {
-      expect(true).toBeTruthy()
+    let taskListId: number
+    let task1: Task
+    let task2: Task
+    let task3: Task
+
+    beforeAll(async () => {
+      const { id } = await prismaClient.taskList.create(
+        {
+          data: {
+            title: getRandomString()
+          }
+        })
+      taskListId = id
+
+      task1 = await prismaClient.task.create(
+        {
+          data: {
+            title: getRandomString(),
+            taskListId,
+            order: 1
+          }
+        }
+      )
+      task2 = await prismaClient.task.create(
+        {
+          data: {
+            title: getRandomString(),
+            taskListId,
+            order: 2
+          }
+        }
+      )
+      task3 = await prismaClient.task.create(
+        {
+          data: {
+            title: getRandomString(),
+            taskListId,
+            order: 3
+          }
+        }
+      )
+    })
+
+    it('move task3 to the 1 position', async () => {
+      const moveTaskMutation = {
+        query: `
+              mutation MoveTask($id: Int!, $position: Int!) {
+                  moveTask(id: $id, position: $position) {
+                      order
+                  }
+              }
+          `,
+        variables: {
+          'id': task3.id,
+          'position': 1
+        }
+      }
+
+      const response = await request(url)
+        .post('/')
+        .send(moveTaskMutation)
+
+      expect(response.status).toBe(200)
+      expect(response.body.errors).toBeUndefined()
+      expect(response.body.data?.moveTask.order).toBeLessThan(task3.order)
+    })
+
+    it('move task1 to the third position', async () => {
+      const count_all = await prismaClient.task.count()
+
+      const moveTaskMutation = {
+        query: `
+              mutation MoveTask($id: Int!, $position: Int!) {
+                  moveTask(id: $id, position: $position) {
+                      order
+                  }
+              }
+          `,
+        variables: {
+          'id': task1.id,
+          'position': count_all
+        }
+      }
+
+      const response = await request(url)
+        .post('/')
+        .send(moveTaskMutation)
+
+      expect(response.status).toBe(200)
+      expect(response.body.errors).toBeUndefined()
+      expect(response.body.data?.moveTask.order).toBeGreaterThan(task1.order)
     })
   })
 
   describe('update a task list', () => {
-    it('happy flow', () => {
-      expect(true).toBeTruthy()
+    let id: number
+
+    beforeEach(async () => {
+      ({ id } = await prismaClient.taskList.create(
+        {
+          data: {
+            title: getRandomString()
+          }
+        }))
+    })
+
+    it('happy flow', async () => {
+      const updateTaskListMutation = {
+        query: `
+              mutation UpdateTaskList($id: Int!, $input: UpdateTaskListInput!) {
+                  updateTaskList(id: $id, input: $input) {
+                      title
+                  }
+              }
+          `,
+        variables: {
+          'input': {
+            'title': getRandomString()
+          },
+          'id': id
+        }
+      }
+
+      const response = await request(url)
+        .post('/')
+        .send(updateTaskListMutation)
+
+      expect(response.status).toBe(200)
+      expect(response.body.errors).toBeUndefined()
+      expect(response.body.data?.updateTaskList.title)
+        .toBe(updateTaskListMutation.variables.input.title)
+    })
+
+    it('update task list that not exist', async () => {
+      const updateTaskList = {
+        query: `
+              mutation UpdateTaskList($id: Int!, $input: UpdateTaskListInput!) {
+                  updateTaskList(id: $id, input: $input) {
+                      title
+                  }
+              }
+          `,
+        variables: {
+          'input': {
+            'title': getRandomString()
+          },
+          'id': id * 10
+        }
+      }
+
+      const response = await request(url)
+        .post('/')
+        .send(updateTaskList)
+
+      expect(response.status).toBe(200)
+      expect(response.body.errors.length).toBeGreaterThanOrEqual(1)
     })
   })
 

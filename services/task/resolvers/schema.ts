@@ -48,5 +48,6 @@ export const typeDefs = gql`
         updateTaskList(id: Int!, input: UpdateTaskListInput!): TaskList!
         deleteTask(id: Int!): MutationResult!
         deleteTaskList(id: Int!): MutationResult!
+        moveTask(id: Int!, position: Int!): Task!
     }
 `
