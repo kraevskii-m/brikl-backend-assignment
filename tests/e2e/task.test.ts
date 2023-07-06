@@ -1,16 +1,16 @@
 import { ApolloServer } from '@apollo/server'
 import { Context } from '../../libs/context'
 import { PrismaClient } from '@prisma/client'
-import { createServer, getRandomString } from '../helpers'
+import { createClient, createServer, getRandomString } from '../helpers'
 import { typeDefs } from '../../services/task/resolvers/schema'
 import { resolvers } from '../../services/task/resolvers'
-import request from 'supertest'
 import { Task } from '../../generated/types'
 
 describe('task service tests', () => {
   let server: ApolloServer<Context>
   let url: string
   let prismaClient: PrismaClient
+  let client: ({}) => Promise<any>
 
   beforeAll(async () => {
     ({ server, url, prismaClient } = await createServer(
@@ -18,6 +18,7 @@ describe('task service tests', () => {
       resolvers,
       Number(process.env.TASK_SERVICE_PORT)
     ))
+    client = createClient(url)
   })
 
   afterAll(async () => {
@@ -47,9 +48,7 @@ describe('task service tests', () => {
             }
           }
 
-          const response = await request(url)
-            .post('/')
-            .send(createTaskListMutation)
+          const response = await client(createTaskListMutation)
 
           expect(response.status).toBe(200)
           expect(response.body.errors).toBeUndefined()
@@ -69,9 +68,7 @@ describe('task service tests', () => {
             variables: {}
           }
 
-          const response = await request(url)
-            .post('/')
-            .send(createTaskListMutation)
+          const response = await client(createTaskListMutation)
 
           expect(response.status).toBe(200)
           expect(response.body.errors.length).toBeGreaterThanOrEqual(1)
@@ -110,9 +107,7 @@ describe('task service tests', () => {
           }
         }
 
-        const response = await request(url)
-          .post('/')
-          .send(createTaskMutation)
+        const response = await client(createTaskMutation)
 
         expect(response.status).toBe(200)
         expect(response.body.errors).toBeUndefined()
@@ -147,9 +142,7 @@ describe('task service tests', () => {
           }
         }
 
-        const response = await request(url)
-          .post('/')
-          .send(createTaskMutation)
+        const response = await client(createTaskMutation)
 
         expect(response.status).toBe(200)
         expect(response.body.errors).toBeUndefined()
@@ -198,9 +191,7 @@ describe('task service tests', () => {
           }
         }
 
-        const response = await request(url)
-          .post('/')
-          .send(updateTaskMutation)
+        const response = await client(updateTaskMutation)
 
         expect(response.status).toBe(200)
         expect(response.body.errors).toBeUndefined()
@@ -240,9 +231,7 @@ describe('task service tests', () => {
           }
         }
 
-        const response = await request(url)
-          .post('/')
-          .send(updateTaskMutation)
+        const response = await client(updateTaskMutation)
 
         expect(response.status).toBe(200)
         expect(response.body.errors.length).toBeGreaterThanOrEqual(1)
@@ -309,9 +298,7 @@ describe('task service tests', () => {
         }
       }
 
-      const response = await request(url)
-        .post('/')
-        .send(moveTaskMutation)
+      const response = await client(moveTaskMutation)
 
       expect(response.status).toBe(200)
       expect(response.body.errors).toBeUndefined()
@@ -335,9 +322,7 @@ describe('task service tests', () => {
         }
       }
 
-      const response = await request(url)
-        .post('/')
-        .send(moveTaskMutation)
+      const response = await client(moveTaskMutation)
 
       expect(response.status).toBe(200)
       expect(response.body.errors).toBeUndefined()
@@ -374,9 +359,7 @@ describe('task service tests', () => {
         }
       }
 
-      const response = await request(url)
-        .post('/')
-        .send(updateTaskListMutation)
+      const response = await client(updateTaskListMutation)
 
       expect(response.status).toBe(200)
       expect(response.body.errors).toBeUndefined()
@@ -401,9 +384,7 @@ describe('task service tests', () => {
         }
       }
 
-      const response = await request(url)
-        .post('/')
-        .send(updateTaskList)
+      const response = await client(updateTaskList)
 
       expect(response.status).toBe(200)
       expect(response.body.errors.length).toBeGreaterThanOrEqual(1)
@@ -446,9 +427,7 @@ describe('task service tests', () => {
         }
       }
 
-      const response = await request(url)
-        .post('/')
-        .send(deleteTaskMutation)
+      const response = await client(deleteTaskMutation)
 
       expect(response.status).toBe(200)
       expect(response.body.errors).toBeUndefined()
@@ -472,9 +451,7 @@ describe('task service tests', () => {
         }
       }
 
-      const response = await request(url)
-        .post('/')
-        .send(deleteTaskMutation)
+      const response = await client(deleteTaskMutation)
 
       expect(response.status).toBe(200)
       expect(response.body.errors).toBeUndefined()
@@ -511,9 +488,7 @@ describe('task service tests', () => {
         }
       }
 
-      const response = await request(url)
-        .post('/')
-        .send(deleteTaskListMutation)
+      const response = await client(deleteTaskListMutation)
 
       expect(response.status).toBe(200)
       expect(response.body.errors).toBeUndefined()
@@ -536,9 +511,7 @@ describe('task service tests', () => {
         }
       }
 
-      const response = await request(url)
-        .post('/')
-        .send(deleteTaskListMutation)
+      const response = await client(deleteTaskListMutation)
 
       expect(response.status).toBe(200)
       expect(response.body.errors).toBeUndefined()

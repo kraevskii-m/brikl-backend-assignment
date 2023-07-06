@@ -1,15 +1,15 @@
 import { Context } from '../../libs/context'
 import { ApolloServer } from '@apollo/server'
 import { PrismaClient } from '@prisma/client'
-import { createServer, getRandomString } from '../helpers'
+import { createClient, createServer, getRandomString } from '../helpers'
 import { typeDefs } from '../../services/user/resolvers/schema'
 import { resolvers } from '../../services/user/resolvers'
-import request from 'supertest'
 
 describe('user service tests', () => {
   let server: ApolloServer<Context>
   let url: string
   let prismaClient: PrismaClient
+  let client: ({}) => Promise<any>
 
   const CreateRandomUser = async () => {
     const userInput = {
@@ -27,6 +27,7 @@ describe('user service tests', () => {
       resolvers,
       Number(process.env.USER_SERVICE_PORT)
     ))
+    client = createClient(url)
   })
 
   afterAll(async () => {
@@ -51,9 +52,7 @@ describe('user service tests', () => {
           }
         }
 
-        const response = await request(url)
-          .post('/')
-          .send(getUserQuery)
+        const response = await client(getUserQuery)
 
         expect(response.status).toBe(200)
         expect(response.body.data?.user.username).toBe(username)
@@ -75,9 +74,7 @@ describe('user service tests', () => {
           }
         }
 
-        const response = await request(url)
-          .post('/')
-          .send(getUserQuery)
+        const response = await client(getUserQuery)
 
         expect(response.status).toBe(200)
         expect(response.body.data?.user).toBeNull()
@@ -98,9 +95,7 @@ describe('user service tests', () => {
           `
         }
 
-        const response = await request(url)
-          .post('/')
-          .send(getUserQuery)
+        const response = await client(getUserQuery)
 
         const rows = await prismaClient.user.count()
 
@@ -129,10 +124,7 @@ describe('user service tests', () => {
           }
         }
 
-
-        const response = await request(url)
-          .post('/')
-          .send(createUserMutation)
+        const response = await client(createUserMutation)
 
         expect(response.status).toBe(200)
         expect(response.body.errors).toBeUndefined()
@@ -155,9 +147,7 @@ describe('user service tests', () => {
           }
         }
 
-        const response = await request(url)
-          .post('/')
-          .send(wrongMutation)
+        const response = await client(wrongMutation)
 
         expect(response.status).toBe(200)
         expect(response.body.errors.length).toBeGreaterThanOrEqual(1)
@@ -192,9 +182,7 @@ describe('user service tests', () => {
           }
         }
 
-        const response = await request(url)
-          .post('/')
-          .send(updateUserMutation)
+        const response = await client(updateUserMutation)
 
         expect(response.status).toBe(200)
         expect(response.body.errors).toBeUndefined()
@@ -220,9 +208,7 @@ describe('user service tests', () => {
           }
         }
 
-        const response = await request(url)
-          .post('/')
-          .send(updateUserMutationWrong)
+        const response = await client(updateUserMutationWrong)
 
         expect(response.status).toBe(200)
         expect(response.body.errors.length).toBeGreaterThanOrEqual(1)
@@ -251,9 +237,7 @@ describe('user service tests', () => {
           }
         }
 
-        const response = await request(url)
-          .post('/')
-          .send(deleteUserMutation)
+        const response = await client(deleteUserMutation)
 
         expect(response.status).toBe(200)
         expect(response.body.errors).toBeUndefined()
@@ -277,9 +261,7 @@ describe('user service tests', () => {
           }
         }
 
-        const response = await request(url)
-          .post('/')
-          .send(deleteUserMutationWrong)
+        const response = await client(deleteUserMutationWrong)
 
         expect(response.status).toBe(200)
         expect(response.body.errors).toBeUndefined()

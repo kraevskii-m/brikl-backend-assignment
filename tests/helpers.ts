@@ -4,6 +4,7 @@ import { startStandaloneServer } from '@apollo/server/standalone'
 import { Context } from '../libs/context'
 import { DocumentNode } from 'graphql/index'
 import { IResolvers } from '@graphql-tools/utils'
+import request from 'supertest'
 
 export const getRandomString = (): string => {
   return (Math.random() + 1).toString(36).substring(7)
@@ -56,4 +57,10 @@ export const cleanDB = async (prismaClient: PrismaClient) => {
     deleteTaskList,
     deleteUser
   ])
+}
+
+export const createClient = (url: string) => {
+  return async (requestData: {}): Promise<any> => await request(url)
+    .post('/')
+    .send(requestData)
 }
