@@ -6,6 +6,21 @@ export interface Context{
 
 const prisma = new PrismaClient()
 
+prisma.$use(async (params, next) => {
+  if (params.model == 'Task' && params.action == 'create') {
+    const taskMaxOrder = await prisma.task.findFirst(
+      {
+        orderBy: {
+          order: 'desc'
+        }
+      }
+    )
+
+    params.args.data.order = taskMaxOrder? taskMaxOrder.order + 1 : 0
+  }
+  return next(params)
+})
+
 export const createContext = async () => ({
   prisma: prisma,
 })

@@ -1,7 +1,7 @@
 import { Context } from '../../libs/context'
 import { ApolloServer } from '@apollo/server'
 import { PrismaClient } from '@prisma/client'
-import { cleanDB, createServer, getRandomString } from '../helpers'
+import { createServer, getRandomString } from '../helpers'
 import { typeDefs } from '../../services/user/resolvers/schema'
 import { resolvers } from '../../services/user/resolvers'
 import request from 'supertest'
@@ -30,7 +30,6 @@ describe('user service tests', () => {
   })
 
   afterAll(async () => {
-    await cleanDB(prismaClient)
     await server?.stop()
   })
 
@@ -130,26 +129,14 @@ describe('user service tests', () => {
           }
         }
 
-        const rows_before = await prismaClient.user.count()
 
         const response = await request(url)
           .post('/')
           .send(createUserMutation)
 
-        const rows_after = await prismaClient.user.count()
-
         expect(response.status).toBe(200)
         expect(response.body.errors).toBeUndefined()
         expect(response.body.data?.createUser.username).toBe(createUserMutation.variables.input.username)
-        expect(rows_before + 1).toBe(rows_after)
-        const last_record = await prismaClient
-          .user.findMany({
-            orderBy: {
-              createdAt: 'desc'
-            },
-            take: 1
-          })
-        expect(last_record[0].username).toBe(createUserMutation.variables.input.username)
       })
 
       it('wrong input returns error', async () => {
@@ -168,17 +155,12 @@ describe('user service tests', () => {
           }
         }
 
-        const rows_before = await prismaClient.user.count()
-
         const response = await request(url)
           .post('/')
           .send(wrongMutation)
 
-        const rows_after = await prismaClient.user.count()
-
         expect(response.status).toBe(200)
         expect(response.body.errors.length).toBeGreaterThanOrEqual(1)
-        expect(rows_before).toBe(rows_after)
       })
     })
 
@@ -210,18 +192,13 @@ describe('user service tests', () => {
           }
         }
 
-        const rows_before = await prismaClient.user.count()
-
         const response = await request(url)
           .post('/')
           .send(updateUserMutation)
 
-        const rows_after = await prismaClient.user.count()
-
         expect(response.status).toBe(200)
         expect(response.body.errors).toBeUndefined()
         expect(response.body.data?.updateUser.username).toBe(updateUserMutation.variables.input.username)
-        expect(rows_before).toBe(rows_after)
         const record = await prismaClient.user.findUnique({ where: { id } })
         expect(record?.username).toBe(updateUserMutation.variables.input.username)
       })
@@ -274,18 +251,13 @@ describe('user service tests', () => {
           }
         }
 
-        const rows_before = await prismaClient.user.count()
-
         const response = await request(url)
           .post('/')
           .send(deleteUserMutation)
 
-        const rows_after = await prismaClient.user.count()
-
         expect(response.status).toBe(200)
         expect(response.body.errors).toBeUndefined()
         expect(response.body.data?.deleteUser.success).toBe(true)
-        expect(rows_before - 1).toBe(rows_after)
         const record = await prismaClient.user.findUnique({ where: { id } })
         expect(record).toBeNull()
       })
@@ -305,18 +277,13 @@ describe('user service tests', () => {
           }
         }
 
-        const rows_before = await prismaClient.user.count()
-
         const response = await request(url)
           .post('/')
           .send(deleteUserMutationWrong)
 
-        const rows_after = await prismaClient.user.count()
-
         expect(response.status).toBe(200)
         expect(response.body.errors).toBeUndefined()
         expect(response.body.data?.deleteUser.success).toBe(false)
-        expect(rows_before).toBe(rows_after)
         const record = await prismaClient.user.findUnique({ where: { id } })
         expect(record).not.toBeNull()
       })

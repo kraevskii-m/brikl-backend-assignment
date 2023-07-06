@@ -24,7 +24,7 @@ model Task {
   status     TaskStatus @default(CREATED)
   order      Float      @unique(sort: Asc)
   taskListId Int
-  list       TaskList   @relation(fields: [taskListId], references: [id])
+  list       TaskList   @relation(fields: [taskListId], references: [id], onDelete: Cascade)
   createdAt  DateTime   @default(now())
 
   @@schema("task")

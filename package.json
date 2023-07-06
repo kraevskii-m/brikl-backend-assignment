@@ -10,7 +10,7 @@
     "db:reset": "dotenv -- pnpm prisma migrate reset",
     "start": "dotenv -- ts-node .",
     "docker:up": "docker-compose up -d",
-    "test": "pnpm docker:up && dotenv -e .env.test -- pnpm prisma migrate dev && jest -i"
+    "test": "pnpm docker:up && dotenv -e .env.test -- pnpm prisma migrate dev && jest"
   },
   "devDependencies": {
     "@apollo/server": "4.7.5",

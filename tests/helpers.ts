@@ -19,6 +19,21 @@ export const createServer = async (typeDefs: DocumentNode,
 
   const prismaClient = new PrismaClient()
 
+  prismaClient.$use(async (params, next) => {
+    if (params.model == 'Task' && params.action == 'create') {
+      const taskMaxOrder = await prismaClient.task.findFirst(
+        {
+          orderBy: {
+            order: 'desc'
+          }
+        }
+      )
+
+      params.args.data.order = taskMaxOrder? taskMaxOrder.order + 1 : 0
+    }
+    return next(params)
+  })
+
   const { url } = await startStandaloneServer<Context>(server, {
     listen: {
       port

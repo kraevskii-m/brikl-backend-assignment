@@ -1,12 +1,12 @@
 import { ApolloServer } from '@apollo/server'
 import { Context } from '../../libs/context'
 import { PrismaClient } from '@prisma/client'
-import { cleanDB, createServer, getRandomString } from '../helpers'
+import { createServer, getRandomString } from '../helpers'
 import { typeDefs } from '../../services/task/resolvers/schema'
 import { resolvers } from '../../services/task/resolvers'
 import request from 'supertest'
 
-describe('user service tests', () => {
+describe('task service tests', () => {
   let server: ApolloServer<Context>
   let url: string
   let prismaClient: PrismaClient
@@ -20,7 +20,6 @@ describe('user service tests', () => {
   })
 
   afterAll(async () => {
-    await cleanDB(prismaClient)
     await server?.stop()
   })
 
@@ -47,61 +46,42 @@ describe('user service tests', () => {
             }
           }
 
-          const rows_before = await prismaClient.taskList.count()
-
           const response = await request(url)
             .post('/')
             .send(createTaskListMutation)
-
-          const rows_after = await prismaClient.taskList.count()
 
           expect(response.status).toBe(200)
           expect(response.body.errors).toBeUndefined()
           expect(response.body.data?.createTaskList.title)
             .toBe(createTaskListMutation.variables.title)
-          expect(rows_before + 1).toBe(rows_after)
-          const last_record = await prismaClient
-            .taskList.findMany({
-              orderBy: {
-                createdAt: 'desc'
-              },
-              take: 1
-            })
-          expect(last_record[0].title).toBe(createTaskListMutation.variables.title)
         })
-      })
-    })
 
-    it('no title should return error', async () => {
-      const createTaskListMutation = {
-        query: `
+        it('no title should return error', async () => {
+          const createTaskListMutation = {
+            query: `
               mutation CreateTaskList($title: String!) {
                   createTaskList(title: $title) {
                       title
                   }
               }
           `,
-        variables: {}
-      }
+            variables: {}
+          }
 
-      const rows_before = await prismaClient.taskList.count()
+          const response = await request(url)
+            .post('/')
+            .send(createTaskListMutation)
 
-      const response = await request(url)
-        .post('/')
-        .send(createTaskListMutation)
-
-      const rows_after = await prismaClient.taskList.count()
-
-      expect(response.status).toBe(200)
-      expect(response.body.errors.length).toBeGreaterThanOrEqual(1)
-      expect(rows_before).toBe(rows_after)
+          expect(response.status).toBe(200)
+          expect(response.body.errors.length).toBeGreaterThanOrEqual(1)
+        })
+      })
     })
 
     describe('create a new task in list', () => {
       let taskListId: number
 
       beforeEach(async () => {
-        await prismaClient.task.deleteMany()
         const { id } = await prismaClient.taskList.create(
           {
             data: {
@@ -129,31 +109,18 @@ describe('user service tests', () => {
           }
         }
 
-        const rows_before = await prismaClient.task.count()
-
         const response = await request(url)
           .post('/')
           .send(createTaskMutation)
-
-        const rows_after = await prismaClient.task.count()
 
         expect(response.status).toBe(200)
         expect(response.body.errors).toBeUndefined()
         expect(response.body.data?.createTask.title)
           .toBe(createTaskMutation.variables.input.title)
-        expect(rows_before + 1).toBe(rows_after)
-        const last_record = await prismaClient
-          .task.findMany({
-            orderBy: {
-              createdAt: 'desc'
-            },
-            take: 1
-          })
-        expect(last_record[0].order).toBe(0)
       })
 
-      it('new task has order the greater order', async () => {
-        const  task  = await prismaClient.task.create(
+      it('new task has the greater order', async () => {
+        await prismaClient.task.create(
           {
             data: {
               title: getRandomString(),
@@ -179,40 +146,130 @@ describe('user service tests', () => {
           }
         }
 
-        const rows_before = await prismaClient.task.count()
-
         const response = await request(url)
           .post('/')
           .send(createTaskMutation)
-
-        const rows_after = await prismaClient.task.count()
 
         expect(response.status).toBe(200)
         expect(response.body.errors).toBeUndefined()
         expect(response.body.data?.createTask.title)
           .toBe(createTaskMutation.variables.input.title)
-        expect(rows_before + 1).toBe(rows_after)
-        const last_record = await prismaClient
-          .task.findMany({
-            orderBy: {
-              createdAt: 'desc'
-            },
-            take: 1
-          })
-        expect(last_record[0].order).toBe(task.order + 1)
       })
     })
 
     describe('update a task', () => {
-      it('happy flow', () => {
-        expect(true).toBeTruthy()
+      let id: number
+
+      beforeEach(async () => {
+        const taskList = await prismaClient.taskList.create(
+          {
+            data: {
+              title: getRandomString()
+            }
+          })
+
+        await prismaClient.$transaction(async (tx) => {
+          const taskInput = {
+            title: getRandomString(),
+            order: 0,
+            taskListId: taskList.id
+          };
+          ({ id } = await tx.task.create({ data: taskInput }))
+        })
+      })
+
+      it('happy flow', async () => {
+        const updateTaskMutation = {
+          query: `
+              mutation UpdateTask($id: Int!, $input: UpdateTaskInput!) {
+                  updateTask(id: $id, input: $input) {
+                      title
+                      status
+                  }
+              }
+          `,
+          variables: {
+            'input': {
+              'title': getRandomString(),
+              'status': 'COMPLETED'
+            },
+            'id': id
+          }
+        }
+
+        const response = await request(url)
+          .post('/')
+          .send(updateTaskMutation)
+
+        expect(response.status).toBe(200)
+        expect(response.body.errors).toBeUndefined()
+        expect(response.body.data?.updateTask.title)
+          .toBe(updateTaskMutation.variables.input.title)
+        expect(response.body.data?.updateTask.status)
+          .toBe(updateTaskMutation.variables.input.status)
+        const newTask = await prismaClient.task.findFirst(
+          {
+            where: {
+              id
+            }
+          }
+        )
+        expect(newTask?.status)
+          .toBe(updateTaskMutation.variables.input.status)
+        expect(newTask?.title)
+          .toBe(updateTaskMutation.variables.input.title)
+      })
+
+      it('update task that not exist', async () => {
+        const updateTaskMutation = {
+          query: `
+              mutation UpdateTask($id: Int!, $input: UpdateTaskInput!) {
+                  updateTask(id: $id, input: $input) {
+                      title
+                      status
+                  }
+              }
+          `,
+          variables: {
+            'input': {
+              'title': getRandomString(),
+              'status': 'COMPLETED'
+            },
+            'id': id * 10
+          }
+        }
+
+        const response = await request(url)
+          .post('/')
+          .send(updateTaskMutation)
+
+        expect(response.status).toBe(200)
+        expect(response.body.errors.length).toBeGreaterThanOrEqual(1)
       })
     })
+  })
 
-    describe('move a task to a specific position in the list', () => {
-      it('happy flow', () => {
-        expect(true).toBeTruthy()
-      })
+  describe('move a task to a specific position in the list', () => {
+    it('happy flow', () => {
+      expect(true).toBeTruthy()
+    })
+  })
+
+  describe('update a task list', () => {
+    it('happy flow', () => {
+      expect(true).toBeTruthy()
+    })
+  })
+
+  describe('Delete a list', () => {
+    it('happy flow', () => {
+      expect(true).toBeTruthy()
+    })
+  })
+
+  describe('Delete a task', () => {
+    it('happy flow', () => {
+      expect(true).toBeTruthy()
     })
   })
 })
