@@ -4,7 +4,7 @@ import { PrismaClient } from '@prisma/client'
 import { createClient, createServer, getRandomString } from '../helpers'
 import { typeDefs } from '../../services/task/resolvers/schema'
 import { resolvers } from '../../services/task/resolvers'
-import { Task } from '../../generated/types'
+import { Task, TaskList } from '../../generated/types'
 
 describe('task service tests', () => {
   let server: ApolloServer<Context>
@@ -26,218 +26,332 @@ describe('task service tests', () => {
   })
 
   describe('query', () => {
-    describe('Retrieve all lists and their tasks', () => {
-      it('happy flow', async () => {
-        expect(true).toBeTruthy()
-      })
-    })
+    let taskList: TaskList
 
-    describe('mutation', () => {
-      describe('create a new list', () => {
-        it('happy flow', async () => {
-          const createTaskListMutation = {
-            query: `
-              mutation CreateTaskList($title: String!) {
-                  createTaskList(title: $title) {
-                      title
-                  }
-              }
-          `,
-            variables: {
-              'title': getRandomString()
-            }
-          }
-
-          const response = await client(createTaskListMutation)
-
-          expect(response.status).toBe(200)
-          expect(response.body.errors).toBeUndefined()
-          expect(response.body.data?.createTaskList.title)
-            .toBe(createTaskListMutation.variables.title)
-        })
-
-        it('no title should return error', async () => {
-          const createTaskListMutation = {
-            query: `
-              mutation CreateTaskList($title: String!) {
-                  createTaskList(title: $title) {
-                      title
-                  }
-              }
-          `,
-            variables: {}
-          }
-
-          const response = await client(createTaskListMutation)
-
-          expect(response.status).toBe(200)
-          expect(response.body.errors.length).toBeGreaterThanOrEqual(1)
-        })
-      })
-    })
-
-    describe('create a new task in list', () => {
-      let taskListId: number
-
-      beforeEach(async () => {
-        const { id } = await prismaClient.taskList.create(
-          {
-            data: {
-              title: getRandomString()
-            }
-          })
-        taskListId = id
-      })
-
-      it('single task', async () => {
-        const createTaskMutation = {
-          query: `
-              mutation CreateTask($input: CreateTaskInput!) {
-                  createTask(input: $input) {
-                      title
-                      order
-                  }
-              }
-          `,
-          variables: {
-            'input': {
-              'title': getRandomString(),
-              'taskListId': taskListId
-            }
+    beforeEach(async () => {
+      taskList = await prismaClient.taskList.create(
+        {
+          data: {
+            title: getRandomString()
           }
         }
+      )
+    })
 
-        const response = await client(createTaskMutation)
+    describe('Retrieve all lists', () => {
+      it('happy flow', async () => {
+        const getTaskListQuery = {
+          query: `
+              query TaskLists {
+                  taskLists {
+                      id
+                  }
+              }
+          `
+        }
+
+        const response = await client(getTaskListQuery)
+
+        const rows = await prismaClient.taskList.count()
 
         expect(response.status).toBe(200)
-        expect(response.body.errors).toBeUndefined()
-        expect(response.body.data?.createTask.title)
-          .toBe(createTaskMutation.variables.input.title)
+        expect(response.body.data?.taskLists.length).toBe(rows)
       })
+    })
 
-      it('new task has the greater order', async () => {
-        await prismaClient.task.create(
+    describe('Retrieve all tasks', () => {
+      it('happy flow', async () => {
+        const { id } = await prismaClient.task.create(
           {
             data: {
               title: getRandomString(),
-              order: 0,
-              taskListId: taskListId
-            }
-          })
-
-        const createTaskMutation = {
-          query: `
-              mutation CreateTask($input: CreateTaskInput!) {
-                  createTask(input: $input) {
-                      title
-                      order
-                  }
-              }
-          `,
-          variables: {
-            'input': {
-              'title': getRandomString(),
-              'taskListId': taskListId
+              taskListId: taskList.id,
+              order: 1
             }
           }
+        )
+
+        const getTasksQuery = {
+          query: `
+              query Tasks {
+                  tasks {
+                      id
+                  }
+              }
+          `
         }
 
-        const response = await client(createTaskMutation)
+        const response = await client(getTasksQuery)
+
+        const rows = await prismaClient.task.count()
 
         expect(response.status).toBe(200)
-        expect(response.body.errors).toBeUndefined()
-        expect(response.body.data?.createTask.title)
-          .toBe(createTaskMutation.variables.input.title)
+        expect(response.body.data?.tasks.length).toBe(rows)
+        expect(response.body.data?.tasks.map((a: { id: string }) => a.id)).toContain(id)
       })
     })
 
-    describe('update a task', () => {
-      let id: number
-
-      beforeEach(async () => {
-        const taskList = await prismaClient.taskList.create(
-          {
-            data: {
-              title: getRandomString()
-            }
-          })
-
-        await prismaClient.$transaction(async (tx) => {
-          const taskInput = {
-            title: getRandomString(),
-            order: 0,
-            taskListId: taskList.id
-          };
-          ({ id } = await tx.task.create({ data: taskInput }))
-        })
-      })
-
+    describe('Retrieve single list', () => {
       it('happy flow', async () => {
-        const updateTaskMutation = {
+        const getTaskListQuery = {
           query: `
-              mutation UpdateTask($id: Int!, $input: UpdateTaskInput!) {
-                  updateTask(id: $id, input: $input) {
-                      title
-                      status
+              query TaskList($id: Int!) {
+                  taskList(id: $id) {
+                      id
                   }
               }
           `,
           variables: {
-            'input': {
-              'title': getRandomString(),
-              'status': 'COMPLETED'
-            },
+            'id': taskList.id
+          }
+        }
+
+        const response = await client(getTaskListQuery)
+
+        expect(response.status).toBe(200)
+        expect(response.body.data?.taskList.id).toBe(getTaskListQuery.variables.id)
+      })
+    })
+
+    describe('Retrieve single task', () => {
+      it('happy flow', async () => {
+        const { id } = await prismaClient.task.create(
+          {
+            data: {
+              title: getRandomString(),
+              taskListId: taskList.id,
+              order: 1
+            }
+          }
+        )
+
+        const getTaskListQuery = {
+          query: `
+              query Task($id: Int!) {
+                  task(id: $id) {
+                      id
+                  }
+              }
+          `,
+          variables: {
             'id': id
           }
         }
 
-        const response = await client(updateTaskMutation)
+        const response = await client(getTaskListQuery)
 
         expect(response.status).toBe(200)
-        expect(response.body.errors).toBeUndefined()
-        expect(response.body.data?.updateTask.title)
-          .toBe(updateTaskMutation.variables.input.title)
-        expect(response.body.data?.updateTask.status)
-          .toBe(updateTaskMutation.variables.input.status)
-        const newTask = await prismaClient.task.findFirst(
-          {
-            where: {
-              id
-            }
-          }
-        )
-        expect(newTask?.status)
-          .toBe(updateTaskMutation.variables.input.status)
-        expect(newTask?.title)
-          .toBe(updateTaskMutation.variables.input.title)
+        expect(response.body.data?.task.id).toBe(getTaskListQuery.variables.id)
       })
+    })
+  })
 
-      it('update task that not exist', async () => {
-        const updateTaskMutation = {
+  describe('mutation', () => {
+    describe('create a new list', () => {
+      it('happy flow', async () => {
+        const createTaskListMutation = {
           query: `
-              mutation UpdateTask($id: Int!, $input: UpdateTaskInput!) {
-                  updateTask(id: $id, input: $input) {
+              mutation CreateTaskList($title: String!) {
+                  createTaskList(title: $title) {
                       title
-                      status
                   }
               }
           `,
           variables: {
-            'input': {
-              'title': getRandomString(),
-              'status': 'COMPLETED'
-            },
-            'id': id * 10
+            'title': getRandomString()
           }
         }
 
-        const response = await client(updateTaskMutation)
+        const response = await client(createTaskListMutation)
+
+        expect(response.status).toBe(200)
+        expect(response.body.errors).toBeUndefined()
+        expect(response.body.data?.createTaskList.title)
+          .toBe(createTaskListMutation.variables.title)
+      })
+
+      it('no title should return error', async () => {
+        const createTaskListMutation = {
+          query: `
+              mutation CreateTaskList($title: String!) {
+                  createTaskList(title: $title) {
+                      title
+                  }
+              }
+          `,
+          variables: {}
+        }
+
+        const response = await client(createTaskListMutation)
 
         expect(response.status).toBe(200)
         expect(response.body.errors.length).toBeGreaterThanOrEqual(1)
       })
     })
   })
+
+  describe('create a new task in list', () => {
+    let taskListId: number
+
+    beforeEach(async () => {
+      const { id } = await prismaClient.taskList.create(
+        {
+          data: {
+            title: getRandomString()
+          }
+        })
+      taskListId = id
+    })
+
+    it('single task', async () => {
+      const createTaskMutation = {
+        query: `
+              mutation CreateTask($input: CreateTaskInput!) {
+                  createTask(input: $input) {
+                      title
+                      order
+                  }
+              }
+          `,
+        variables: {
+          'input': {
+            'title': getRandomString(),
+            'taskListId': taskListId
+          }
+        }
+      }
+
+      const response = await client(createTaskMutation)
+
+      expect(response.status).toBe(200)
+      expect(response.body.errors).toBeUndefined()
+      expect(response.body.data?.createTask.title)
+        .toBe(createTaskMutation.variables.input.title)
+    })
+
+    it('new task has the greater order', async () => {
+      await prismaClient.task.create(
+        {
+          data: {
+            title: getRandomString(),
+            order: 0,
+            taskListId: taskListId
+          }
+        })
+
+      const createTaskMutation = {
+        query: `
+              mutation CreateTask($input: CreateTaskInput!) {
+                  createTask(input: $input) {
+                      title
+                      order
+                  }
+              }
+          `,
+        variables: {
+          'input': {
+            'title': getRandomString(),
+            'taskListId': taskListId
+          }
+        }
+      }
+
+      const response = await client(createTaskMutation)
+
+      expect(response.status).toBe(200)
+      expect(response.body.errors).toBeUndefined()
+      expect(response.body.data?.createTask.title)
+        .toBe(createTaskMutation.variables.input.title)
+    })
+  })
+
+  describe('update a task', () => {
+    let id: number
+
+    beforeEach(async () => {
+      const taskList = await prismaClient.taskList.create(
+        {
+          data: {
+            title: getRandomString()
+          }
+        })
+
+      await prismaClient.$transaction(async (tx) => {
+        const taskInput = {
+          title: getRandomString(),
+          order: 0,
+          taskListId: taskList.id
+        };
+        ({ id } = await tx.task.create({ data: taskInput }))
+      })
+    })
+
+    it('happy flow', async () => {
+      const updateTaskMutation = {
+        query: `
+              mutation UpdateTask($id: Int!, $input: UpdateTaskInput!) {
+                  updateTask(id: $id, input: $input) {
+                      title
+                      status
+                  }
+              }
+          `,
+        variables: {
+          'input': {
+            'title': getRandomString(),
+            'status': 'COMPLETED'
+          },
+          'id': id
+        }
+      }
+
+      const response = await client(updateTaskMutation)
+
+      expect(response.status).toBe(200)
+      expect(response.body.errors).toBeUndefined()
+      expect(response.body.data?.updateTask.title)
+        .toBe(updateTaskMutation.variables.input.title)
+      expect(response.body.data?.updateTask.status)
+        .toBe(updateTaskMutation.variables.input.status)
+      const newTask = await prismaClient.task.findFirst(
+        {
+          where: {
+            id
+          }
+        }
+      )
+      expect(newTask?.status)
+        .toBe(updateTaskMutation.variables.input.status)
+      expect(newTask?.title)
+        .toBe(updateTaskMutation.variables.input.title)
+    })
+
+    it('update task that not exist', async () => {
+      const updateTaskMutation = {
+        query: `
+              mutation UpdateTask($id: Int!, $input: UpdateTaskInput!) {
+                  updateTask(id: $id, input: $input) {
+                      title
+                      status
+                  }
+              }
+          `,
+        variables: {
+          'input': {
+            'title': getRandomString(),
+            'status': 'COMPLETED'
+          },
+          'id': id * 10
+        }
+      }
+
+      const response = await client(updateTaskMutation)
+
+      expect(response.status).toBe(200)
+      expect(response.body.errors.length).toBeGreaterThanOrEqual(1)
+    })
+  })
+
 
   describe('move a task to a specific position in the list', () => {
     let taskListId: number

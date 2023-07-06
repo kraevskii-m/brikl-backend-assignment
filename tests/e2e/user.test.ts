@@ -96,7 +96,6 @@ describe('user service tests', () => {
         }
 
         const response = await client(getUserQuery)
-
         const rows = await prismaClient.user.count()
 
         expect(response.status).toBe(200)

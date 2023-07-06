@@ -8,6 +8,11 @@ You will be getting involved on this! We have setting up user service to manage 
 
 ## Functionality
 
+### ToDo
+
+* Add the authorization to gateway
+* Add the User field to TaskList model
+
 ### Task management
 
 - [x] Create a new list

@@ -11,12 +11,12 @@ export const typeDefs = gql`
         title: String!
         status: String!
         order: Float!
+        taskListId: Int!
     }
 
     type TaskList {
         id: Int!
-        title: String
-        tasks: [Task!]
+        title: String!
     }
 
     type MutationResult {
@@ -38,10 +38,10 @@ export const typeDefs = gql`
     }
 
     type Query {
-        retrieveTaskList(id: Int!): TaskList
-        retrieveTaskLists: [TaskList!]!
-        retrieveTask(id: Int!): Task
-        retrieveTasks: [Task!]!
+        taskList(id: Int!): TaskList
+        taskLists: [TaskList!]!
+        task(id: Int!): Task
+        tasks: [Task!]!
     }
 
     type Mutation {
