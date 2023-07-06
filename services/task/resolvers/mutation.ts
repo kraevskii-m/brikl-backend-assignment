@@ -20,6 +20,13 @@ export const mutation: Resolvers<Context>['Mutation'] = {
         status: input.status ?? undefined
       }
     }),
+  updateTaskList: async (parent, { id, input }, ctx) =>
+    ctx.prisma.taskList.update({
+      where: { id },
+      data: {
+        title: input.title ?? undefined
+      }
+    }),
   deleteTask: async (parent, { id }, ctx) => {
     try {
       await ctx.prisma.task.delete({

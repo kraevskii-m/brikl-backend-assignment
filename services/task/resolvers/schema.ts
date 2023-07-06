@@ -33,6 +33,10 @@ export const typeDefs = gql`
         status: Status
     }
 
+    input UpdateTaskListInput {
+        title: String
+    }
+
     type Query {
         retrieveLists: [TaskList!]!
     }
@@ -41,6 +45,7 @@ export const typeDefs = gql`
         createTaskList(title: String!): TaskList!,
         createTask(input: CreateTaskInput!): Task!
         updateTask(id: Int!, input: UpdateTaskInput!): Task!
+        updateTaskList(id: Int!, input: UpdateTaskListInput!): TaskList!
         deleteTask(id: Int!): MutationResult!
         deleteTaskList(id: Int!): MutationResult!
     }
