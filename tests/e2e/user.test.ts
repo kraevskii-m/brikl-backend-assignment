@@ -7,7 +7,6 @@ import { resolvers } from '../../services/user/resolvers'
 
 describe('user service tests', () => {
   let server: ApolloServer<Context>
-  let url: string
   let prismaClient: PrismaClient
   let client: ({}) => Promise<any>
 
@@ -22,6 +21,7 @@ describe('user service tests', () => {
   }
 
   beforeAll(async () => {
+    let url: string
     ({ server, url, prismaClient } = await createServer(
       typeDefs,
       resolvers,

@@ -1,5 +1,4 @@
-import { cleanDB } from './helpers'
-import { PrismaClient } from '@prisma/client'
+import { cleanDB, createPrismaClient } from './helpers'
 import dotenv from 'dotenv'
 
 module.exports = async () => {
@@ -7,7 +6,7 @@ module.exports = async () => {
 
   process.env = {
     ...process.env,
-    ...config.parsed,
-  };
-  await cleanDB(new PrismaClient())
+    ...config.parsed
+  }
+  await cleanDB(createPrismaClient())
 }

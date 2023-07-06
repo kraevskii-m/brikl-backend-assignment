@@ -10,14 +10,7 @@ export const getRandomString = (): string => {
   return (Math.random() + 1).toString(36).substring(7)
 }
 
-export const createServer = async (typeDefs: DocumentNode,
-                                   resolvers: IResolvers,
-                                   port: number) => {
-  const server = await createGqlServer({
-    typeDefs,
-    resolvers
-  })
-
+export const createPrismaClient = () => {
   const prismaClient = new PrismaClient()
 
   prismaClient.$use(async (params, next) => {
@@ -30,10 +23,21 @@ export const createServer = async (typeDefs: DocumentNode,
         }
       )
 
-      params.args.data.order = taskMaxOrder? taskMaxOrder.order + 1 : 1
+      params.args.data.order = taskMaxOrder ? taskMaxOrder.order + 1 : 1
     }
     return next(params)
   })
+  return prismaClient
+}
+export const createServer = async (typeDefs: DocumentNode,
+                                   resolvers: IResolvers,
+                                   port: number) => {
+  const server = await createGqlServer({
+    typeDefs,
+    resolvers
+  })
+
+  const prismaClient = createPrismaClient()
 
   const { url } = await startStandaloneServer<Context>(server, {
     listen: {

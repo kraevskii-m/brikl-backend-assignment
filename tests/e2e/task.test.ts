@@ -8,11 +8,11 @@ import { Task, TaskList } from '../../generated/types'
 
 describe('task service tests', () => {
   let server: ApolloServer<Context>
-  let url: string
   let prismaClient: PrismaClient
   let client: ({}) => Promise<any>
 
   beforeAll(async () => {
+    let url: string
     ({ server, url, prismaClient } = await createServer(
       typeDefs,
       resolvers,
@@ -147,7 +147,7 @@ describe('task service tests', () => {
   })
 
   describe('mutation', () => {
-    describe('create a new list', () => {
+    describe('create a new task list', () => {
       it('happy flow', async () => {
         const createTaskListMutation = {
           query: `

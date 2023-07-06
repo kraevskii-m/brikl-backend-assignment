@@ -40,7 +40,7 @@ async function createSubSchemas() {
   ])
 }
 
-async function getStitchedSchemas(): Promise<GraphQLSchema> {
+export async function getStitchedSchemas(): Promise<GraphQLSchema> {
   const { stitchingDirectivesTransformer } = stitchingDirectives()
 
   const schema = stitchSchemas({
