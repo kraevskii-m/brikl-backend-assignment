@@ -38,7 +38,10 @@ export const typeDefs = gql`
     }
 
     type Query {
-        retrieveLists: [TaskList!]!
+        retrieveTaskList(id: Int!): TaskList
+        retrieveTaskLists: [TaskList!]!
+        retrieveTask(id: Int!): Task
+        retrieveTasks: [Task!]!
     }
 
     type Mutation {
