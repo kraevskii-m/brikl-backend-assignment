@@ -21,5 +21,13 @@ export const mutation: Resolvers<Context>['Mutation'] = {
         }
       })
     })
-  }
+  },
+  updateTask: async (parent, { id, input }, ctx) =>
+    ctx.prisma.task.update({
+      where: { id },
+      data: {
+        title: input.title ?? undefined,
+        status: input.status ?? undefined
+      }
+    })
 }

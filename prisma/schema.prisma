@@ -41,7 +41,7 @@ model TaskList {
 
 enum TaskStatus {
   CREATED
-  COMLETED
+  COMPLETED
 
   @@schema("task")
 }
