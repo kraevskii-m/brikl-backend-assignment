@@ -1,8 +1,13 @@
 import gql from 'graphql-tag'
 
 export const typeDefs = gql`
+    type Task {
+        title: String
+    }
+    
     type TaskList {
         title: String
+        tasks: [Task!]
     }
     
     type MutationResult {
@@ -18,19 +23,7 @@ export const typeDefs = gql`
     }
 
     type Mutation {
+        createTaskList(title: String!): TaskList!,
         createTask(input: CreateTaskInput!): MutationResult!
     }
 `
-//   type Task {
-//   }
-//
-//   type MutationResult {
-//     success: Boolean!
-//   }
-//
-//   type Query {
-//   }
-//
-//   type Mutation {
-//   }
-// `

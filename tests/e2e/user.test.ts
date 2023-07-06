@@ -2,8 +2,9 @@ import { Context } from '../../libs/context'
 import { ApolloServer } from '@apollo/server'
 import { PrismaClient } from '@prisma/client'
 import { cleanDB, createServer, getRandomString } from '../helpers'
-
-const request = require('supertest')
+import { typeDefs } from '../../services/user/resolvers/schema'
+import { resolvers } from '../../services/user/resolvers'
+import request from 'supertest'
 
 describe('user service tests', () => {
   let server: ApolloServer<Context>
@@ -21,7 +22,11 @@ describe('user service tests', () => {
   }
 
   beforeAll(async () => {
-    ({ server, url, prismaClient } = await createServer())
+    ({ server, url, prismaClient } = await createServer(
+      typeDefs,
+      resolvers,
+      Number(process.env.USER_SERVICE_PORT)
+    ))
   })
 
   afterAll(async () => {
